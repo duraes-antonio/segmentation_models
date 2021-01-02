@@ -1,3 +1,4 @@
+from keras.layers import Dropout
 from keras_applications import get_submodules_from_kwargs
 
 from ._common_blocks import Conv2dBn
@@ -45,7 +46,9 @@ def Conv3x3BnReLU(filters, use_batchnorm, name=None):
     return wrapper
 
 
-def DecoderUpsamplingX2Block(filters, stage, use_batchnorm=False):
+def DecoderUpsamplingX2Block(
+        filters, stage, use_batchnorm=False, dropout: float = 0
+):
     up_name = 'decoder_stage{}_upsampling'.format(stage)
     conv1_name = 'decoder_stage{}a'.format(stage)
     conv2_name = 'decoder_stage{}b'.format(stage)
@@ -58,6 +61,7 @@ def DecoderUpsamplingX2Block(filters, stage, use_batchnorm=False):
 
         if skip is not None:
             x = layers.Concatenate(axis=concat_axis, name=concat_name)([x, skip])
+            x = Dropout(dropout)(x) if dropout > 0 else x
 
         x = Conv3x3BnReLU(filters, use_batchnorm, name=conv1_name)(x)
         x = Conv3x3BnReLU(filters, use_batchnorm, name=conv2_name)(x)
@@ -67,7 +71,9 @@ def DecoderUpsamplingX2Block(filters, stage, use_batchnorm=False):
     return wrapper
 
 
-def DecoderTransposeX2Block(filters, stage, use_batchnorm=False):
+def DecoderTransposeX2Block(
+        filters, stage, use_batchnorm=False, dropout: float = 0
+):
     transp_name = 'decoder_stage{}a_transpose'.format(stage)
     bn_name = 'decoder_stage{}a_bn'.format(stage)
     relu_name = 'decoder_stage{}a_relu'.format(stage)
@@ -94,6 +100,7 @@ def DecoderTransposeX2Block(filters, stage, use_batchnorm=False):
 
         if skip is not None:
             x = layers.Concatenate(axis=concat_axis, name=concat_name)([x, skip])
+            x = Dropout(dropout)(x) if dropout > 0 else x
 
         x = Conv3x3BnReLU(filters, use_batchnorm, name=conv_block_name)(x)
 
@@ -115,6 +122,7 @@ def build_unet(
         classes=1,
         activation='sigmoid',
         use_batchnorm=True,
+        dropout: float = 0
 ):
     input_ = backbone.input
     x = backbone.output
@@ -125,6 +133,7 @@ def build_unet(
 
     # add center block if previous operation was maxpooling (for vgg models)
     if isinstance(backbone.layers[-1], layers.MaxPooling2D):
+        x = Dropout(dropout)(x) if dropout > 0 else x
         x = Conv3x3BnReLU(512, use_batchnorm, name='center_block1')(x)
         x = Conv3x3BnReLU(512, use_batchnorm, name='center_block2')(x)
 
@@ -136,7 +145,7 @@ def build_unet(
         else:
             skip = None
 
-        x = decoder_block(decoder_filters[i], stage=i, use_batchnorm=use_batchnorm)(x, skip)
+        x = decoder_block(decoder_filters[i], stage=i, use_batchnorm=use_batchnorm, dropout=dropout)(x, skip)
 
     # model head (define number of output classes)
     x = layers.Conv2D(
