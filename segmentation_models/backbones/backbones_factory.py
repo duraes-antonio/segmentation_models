@@ -1,10 +1,11 @@
 import copy
 import efficientnet.model as eff
+import keras_applications as ka
 from classification_models.models_factory import ModelsFactory
 
 from . import inception_resnet_v2 as irv2
 from . import inception_v3 as iv3
-
+from . import vgg19
 
 class BackbonesFactory(ModelsFactory):
     _default_feature_layers = {
@@ -93,6 +94,7 @@ class BackbonesFactory(ModelsFactory):
     @property
     def models(self):
         all_models = copy.copy(self._models)
+        all_models['vgg19'] = [vgg19.VGG19, ka.vgg19.preprocess_input],
         all_models.update(self._models_update)
         for k in self._models_delete:
             del all_models[k]
