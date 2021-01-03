@@ -85,6 +85,7 @@ class BackbonesFactory(ModelsFactory):
         'efficientnetb5': [eff.EfficientNetB5, eff.preprocess_input],
         'efficientnetb6': [eff.EfficientNetB6, eff.preprocess_input],
         'efficientnetb7': [eff.EfficientNetB7, eff.preprocess_input],
+        'vgg19_drop': [vgg19.VGG19, ka.vgg19.preprocess_input],
     }
 
     # currently not supported
@@ -94,7 +95,6 @@ class BackbonesFactory(ModelsFactory):
     @property
     def models(self):
         all_models = copy.copy(self._models)
-        all_models['vgg19'] = [vgg19.VGG19, ka.vgg19.preprocess_input],
         all_models.update(self._models_update)
         for k in self._models_delete:
             del all_models[k]
